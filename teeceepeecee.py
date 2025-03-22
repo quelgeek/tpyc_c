@@ -2,7 +2,7 @@ import asyncio
 import pyngres.asyncio as py
 import ctypes
 import struct
-#import ingtypes as ii
+import ingtypes as ii
 from loguru import logger
 import random
 import time
@@ -222,8 +222,7 @@ class RepeatedQuery():
                 else:
                     raise
             ##  pad name to full extent with blanks
-            _name = _name + b' '*64
-            self._name = _name[:64]
+            self._name = _name.ljust(64,b' ')
 
             ##  use xxhash to generate a stable cross-platform signature
             signature = xxhash.xxh64(_sql).intdigest()
@@ -489,262 +488,233 @@ class RepeatedQuery():
 #        AND c.warehouse = ${} = ~V '''
 #    }
 
-stmtGetCustWhse = RepeatedQuery('''
-SELECT c.discount, c.last, c.credit, w.tax 
-FROM customer c, warehouse w 
-WHERE w.warehouse = ${} ~V 
-AND w.warehouse = c.warehouse 
-AND c.district = ${} ~V 
-AND c.customer = ${} ~V ''',
-name='stmtGetCustWhse' )
+stmtGetCustWhse = RepeatedQuery(
+    'SELECT c.discount, c.last, c.credit, w.tax '
+    'FROM customer c, warehouse w '
+    'WHERE w.warehouse = ${} ~V '
+    'AND w.warehouse = c.warehouse '
+    'AND c.district = ${} ~V '
+    'AND c.customer = ${} ~V ', name='stmtGetCustWhse' )
 
-stmtGetDist = RepeatedQuery('''
-SELECT d.next_o_id, float4(d.tax) as tax
-FROM district d
-WHERE d.district = ${} ~V 
-AND d.warehouse = ${} ~V 
-FOR UPDATE''',
-name = 'stmtGetDist' )
+stmtGetDist = RepeatedQuery(
+    'SELECT d.next_o_id, float4(d.tax) as tax '
+    'FROM district d '
+    'WHERE d.district = ${} ~V '
+    'AND d.warehouse = ${} ~V '
+    'FOR UPDATE', name = 'stmtGetDist' )
 
-stmtInsertNewOrder = RepeatedQuery('''
-INSERT INTO new_order (order, district, warehouse)  
-VALUES ( ${} ~V , ${} ~V , ${} ~V )''',
-name = 'stmtInsertNewOrder' )
+stmtInsertNewOrder = RepeatedQuery(
+    'INSERT INTO new_order (order, district, warehouse) ' 
+    'VALUES ( ${} ~V , ${} ~V , ${} ~V )', name = 'stmtInsertNewOrder' )
 
-stmtUpdateDist = RepeatedQuery('''
-UPDATE district d
-SET next_o_id = d.next_o_id+1  
-WHERE d.district = ${} = ~V 
-AND d.warehouse = ${} = ~V ''',
-name = 'stmtUpdateDist' )
+stmtUpdateDist = RepeatedQuery(
+    'UPDATE district d '
+    'SET next_o_id = d.next_o_id+1 ' 
+    'WHERE d.district = ${} = ~V '
+    'AND d.warehouse = ${} = ~V ', name = 'stmtUpdateDist' )
 
-stmtInsertOrder = RepeatedQuery('''
-INSERT INTO order  
-(order, district, warehouse, customer, entry_d, ol_cnt, all_local) 
-VALUES (${} = ~V , ${} = ~V , ${} = ~V , ${} = ~V ,
-CURRENT_TIME , ${} = ~V , ${} = ~V )''',
-name = 'stmtInsertOrder' )
+stmtInsertOrder = RepeatedQuery(
+    'INSERT INTO order ' 
+    '(order, district, warehouse, customer, entry_d, ol_cnt, all_local) '
+    'VALUES (${} = ~V , ${} = ~V , ${} = ~V , ${} = ~V , '
+    'CURRENT_TIME , ${} = ~V , ${} = ~V )', name = 'stmtInsertOrder' )
 
-stmtGetItem = RepeatedQuery('''
-SELECT i.price, i.name, i.data
-FROM item i 
-WHERE i.item = ${} = ~V ''',
-name = 'stmtGetItem' )
+stmtGetItem = RepeatedQuery(
+    'SELECT i.price, i.name, i.data '
+    'FROM item i '
+    'WHERE i.item = ${} = ~V ', name = 'stmtGetItem' )
 
-stmtGetStock = RepeatedQuery('''
-SELECT s.quantity, s.data, s.dist_01, s.dist_02, s.dist_03,
-s.dist_04, s.dist_05,  s.dist_06, s.dist_07, s.dist_08,
-s.dist_09, s.dist_10 
-FROM stock s
-WHERE s.item = ${} = ~V 
-AND s.warehouse = ${} = ~V 
-FOR UPDATE''',
-name = 'stmtGetStock' )
+stmtGetStock = RepeatedQuery(
+    'SELECT s.quantity, s.data, s.dist_01, s.dist_02, s.dist_03, '
+    's.dist_04, s.dist_05,  s.dist_06, s.dist_07, s.dist_08, '
+    's.dist_09, s.dist_10 '
+    'FROM stock s '
+    'WHERE s.item = ${} = ~V '
+    'AND s.warehouse = ${} = ~V '
+    'FOR UPDATE', name = 'stmtGetStock' )
 
-stmtUpdateStock = RepeatedQuery('''
-    UPDATE stock s 
-    SET s.quantity = ${} = ~V , s.ytd = s.ytd +${} = ~V , s.remote_cnt = s.remote_cnt + ${} = ~V   
-    WHERE s.item = ${} = ~V 
-    AND s.warehouse = ${} = ~V ''',
-name = 'stmtUpdateStock' )
+stmtUpdateStock = RepeatedQuery(
+    'UPDATE stock s 
+    'SET s.quantity = ${} = ~V , s.ytd = s.ytd +${} = ~V , '
+    s.remote_cnt = s.remote_cnt + ${} = ~V '
+    'WHERE s.item = ${} = ~V '
+    'AND s.warehouse = ${} = ~V ', name = 'stmtUpdateStock' )
 
-stmtInsertOrderLine = RepeatedQuery('''
-    INSERT INTO order_line (order, district, warehouse, ol_number, item,
-    supply_warehouse, quantity, amount, dist_info)
-    VALUES (${} = ~V ,${} = ~V ,${} = ~V ,${} = ~V ,${} = ~V ,${} = ~V ,${} = ~V ,${} = ~V ,${} = ~V )''',
-name = 'stmtInsertOrderLine' )
+stmtInsertOrderLine = RepeatedQuery(
+    'INSERT INTO order_line (order, district, warehouse, ol_number, item, '
+    'supply_warehouse, quantity, amount, dist_info) '
+    'VALUES (${} = ~V ,${} = ~V ,${} = ~V ,${} = ~V , ${} = ~V , '
+    '${} = ~V ,${} = ~V ,${} = ~V ,${} = ~V )', name = 'stmtInsertOrderLine' )
 
-payUpdateWhse = RepeatedQuery('''
-UPDATE warehouse w 
-SET ytd = ytd+${} = ~V   
-WHERE w.warehouse = ${} = ~V ''',
-name = 'payUpdateWhse' )
+payUpdateWhse = RepeatedQuery(
+    'UPDATE warehouse w '
+    'SET ytd = ytd+${} = ~V ' 
+    'WHERE w.warehouse = ${} = ~V ', name = 'payUpdateWhse' )
 
-payGetWhse = RepeatedQuery('''
-    SELECT w.street_1, w.street_2, w.city, w.state, w.zip, w.name 
-    FROM warehouse w 
-    WHERE w.warehouse = ${} = ~V ''',
-name = 'payGetWhse' )
+payGetWhse = RepeatedQuery(
+    'SELECT w.street_1, w.street_2, w.city, w.state, w.zip, w.name '
+    'FROM warehouse w '
+    'WHERE w.warehouse = ${} = ~V ', name = 'payGetWhse' )
 
-payUpdateDist = RepeatedQuery('''
-UPDATE district d
-SET ytd = ytd +${} = ~V  
-WHERE d.warehouse = ${} = ~V 
-AND d.district = ${} = ~V ''',
-name = 'payUpdateDist' )
+payUpdateDist = RepeatedQuery(
+    'UPDATE district d '
+    'SET ytd = ytd +${} = ~V ' 
+    'WHERE d.warehouse = ${} = ~V '
+    'AND d.district = ${} = ~V ', name = 'payUpdateDist' )
 
-payGetDist = RepeatedQuery('''
-SELECT d.street_1, d.street_2, d.city, d.state, d.zip, d.name 
-FROM district d
-WHERE d.warehouse = ${} = ~V 
-AND d.district = ${} = ~V ''',
-name = 'payGetDist' )
+payGetDist = RepeatedQuery(
+    'SELECT d.street_1, d.street_2, d.city, d.state, d.zip, d.name '
+    'FROM district d '
+    'WHERE d.warehouse = ${} = ~V '
+    'AND d.district = ${} = ~V ', name = 'payGetDist' )
 
-payCountCust = RepeatedQuery('''
-SELECT count(*) AS namecnt 
-FROM customer c  
-WHERE c.last = ${} = ~V 
-AND c.district = ${} = ~V 
-AND c.warehouse = ${} = ~V ''',
-name = 'payCountCust' )
+payCountCust = RepeatedQuery(
+    'SELECT count(*) AS namecnt '
+    'FROM customer c ' 
+    'WHERE c.last = ${} = ~V '
+    'AND c.district = ${} = ~V '
+    'AND c.warehouse = ${} = ~V ', name = 'payCountCust' )
 
-payCursorCustByName = RepeatedQuery('''
-SELECT c.first, c.middle, c.customer, c.street_1, c.street_2,
-    c.city, c.state, c.zip, c.phone, c.credit, c.credit_lim,
-    c.discount, c.balance, c.since  
-FROM customer c
-WHERE c.warehouse = ${} = ~V 
-AND c.district = ${} = ~V  
-AND c.last = ${} = ~V   
-ORDER BY c.warehouse, c.district, c.last, c.first''',
-name = 'payCursorCustByName' )
+payCursorCustByName = RepeatedQuery(
+    'SELECT c.first, c.middle, c.customer, c.street_1, c.street_2, '
+    'c.city, c.state, c.zip, c.phone, c.credit, c.credit_lim, '
+    'c.discount, c.balance, c.since ' 
+    'FROM customer c '
+    'WHERE c.warehouse = ${} = ~V '
+    'AND c.district = ${} = ~V '
+    'AND c.last = ${} = ~V '
+    'ORDER BY c.warehouse, c.district, c.last, c.first',
+    name = 'payCursorCustByName' )
 
-payGetCust = RepeatedQuery('''
-SELECT c.first, c.middle, c.last, c.street_1, c.street_2,
-    c.city, c.state, c.zip, c.phone, c.credit, c.credit_lim,
-    c.discount, c.balance, c.since  
-FROM customer c 
-WHERE c.warehouse = ${} = ~V 
-AND c.district = ${} = ~V  
-AND c.customer = ${} = ~V ''',
-name = 'payGetCust' )
+payGetCust = RepeatedQuery(
+    'SELECT c.first, c.middle, c.last, c.street_1, c.street_2, '
+    'c.city, c.state, c.zip, c.phone, c.credit, c.credit_lim, '
+    'c.discount, c.balance, c.since '
+    'FROM customer c '
+    'WHERE c.warehouse = ${} = ~V '
+    'AND c.district = ${} = ~V ' 
+    'AND c.customer = ${} = ~V ', name = 'payGetCust' )
 
-payGetCustCdata = RepeatedQuery('''
-SELECT c.data 
-FROM customer c
-WHERE c.warehouse = ${} = ~V 
-AND c.district = ${} = ~V  
-AND c.customer = ${} = ~V ''',
-name = 'payGetCustCdata' )
+payGetCustCdata = RepeatedQuery(
+    'SELECT c.data '
+    'FROM customer c '
+    'WHERE c.warehouse = ${} = ~V '
+    'AND c.district = ${} = ~V ' 
+    'AND c.customer = ${} = ~V ', name = 'payGetCustCdata' )
 
-payUpdateCustBalCdata = RepeatedQuery('''
-UPDATE customer c
-SET balance = ${} = ~V , data = ${} = ~V   
-WHERE c.warehouse = ${} = ~V 
-AND c.district = ${} = ~V  
-AND c.customer = ${} = ~V ''',
-name = 'payUpdateCustBalCdata' )
+payUpdateCustBalCdata = RepeatedQuery(
+    'UPDATE customer c '
+    'SET balance = ${} = ~V , data = ${} = ~V '  
+    'WHERE c.warehouse = ${} = ~V '
+    'AND c.district = ${} = ~V ' 
+    'AND c.customer = ${} = ~V ', name = 'payUpdateCustBalCdata' )
 
-payUpdateCustBal = RepeatedQuery('''
-UPDATE customer c
-SET balance = ${} = ~V  
-WHERE c.warehouse = ${} = ~V 
-AND c.district = ${} = ~V  
-AND c.customer = ${} = ~V ''',
-name = 'payUpdateCustBal' )
+payUpdateCustBal = RepeatedQuery(
+    'UPDATE customer c '
+    'SET balance = ${} = ~V ' 
+    'WHERE c.warehouse = ${} = ~V '
+    'AND c.district = ${} = ~V ' 
+    'AND c.customer = ${} = ~V ', name = 'payUpdateCustBal' )
 
-payInsertHist = RepeatedQuery('''
-INSERT INTO history (customer_district, customer_warehouse, 
-customer, district, warehouse, date, amount, data)  
-VALUES (${} = ~V ,${} = ~V ,${} = ~V ,${} = ~V ,
-        ${} = ~V ,CURRENT_TIME ,${} = ~V ,${} = ~V )''',
-name = 'payInsertHist' )
+payInsertHist = RepeatedQuery(
+    'INSERT INTO history (customer_district, customer_warehouse, '
+    'customer, district, warehouse, date, amount, data) ' 
+    'VALUES (${} = ~V ,${} = ~V ,${} = ~V ,${} = ~V , '
+    '${} = ~V ,CURRENT_TIME ,${} = ~V ,${} = ~V )',
+    name = 'payInsertHist' )
 
-ordStatCountCust = RepeatedQuery('''
-SELECT count(*) AS namecnt 
-FROM customer c
- WHERE c.last = ${} = ~V 
-AND c.district = ${} = ~V  
-AND c.warehouse = ${} = ~V ''',
-name = 'ordStatCountCust' )
+ordStatCountCust = RepeatedQuery(
+    'SELECT count(*) AS namecnt '
+    'FROM customer c '
+    'WHERE c.last = ${} = ~V '
+    'AND c.district = ${} = ~V ' 
+    'AND c.warehouse = ${} = ~V ', name = 'ordStatCountCust' )
 
-ordStatGetCust = RepeatedQuery('''
-SELECT c.balance, c.first, c.middle, customer 
-FROM customer c
- WHERE c.last = ${} = ~V  
-AND c.district = ${} = ~V  
-AND c.warehouse = ${} = ~V  
- ORDER BY warehouse, district, last, first''',
-name = 'ordStatGetCust' )
+ordStatGetCust = RepeatedQuery(
+    'SELECT c.balance, c.first, c.middle, customer '
+    'FROM customer c '
+    'WHERE c.last = ${} = ~V ' 
+    'AND c.district = ${} = ~V ' 
+    'AND c.warehouse = ${} = ~V ' 
+    'ORDER BY warehouse, district, last, first', name = 'ordStatGetCust' )
 
-ordStatGetNewestOrd = RepeatedQuery('''
-SELECT MAX(order) AS maxorderid 
-FROM order o 
-WHERE o.warehouse = ${} = ~V  
-AND o.district = ${} = ~V  
-AND o.customer = ${} = ~V ''',
-name = 'ordStatGetNewestOrd' )
+ordStatGetNewestOrd = RepeatedQuery(
+    'SELECT MAX(order) AS maxorderid '
+    'FROM order o '
+    'WHERE o.warehouse = ${} = ~V ' 
+    'AND o.district = ${} = ~V ' 
+    'AND o.customer = ${} = ~V ', name = 'ordStatGetNewestOrd' )
 
-ordStatGetCustBal = RepeatedQuery('''
-SELECT c.balance, c.first, c.middle, c.last 
- FROM customer c 
- WHERE c.customer = ${} = ~V  
-AND c.district = ${} = ~V  
-AND c.warehouse = ${} = ~V ''',
-name = 'ordStatGetCustBal' )
+ordStatGetCustBal = RepeatedQuery(
+    'SELECT c.balance, c.first, c.middle, c.last '
+    'FROM customer c '
+    'WHERE c.customer = ${} = ~V ' 
+    'AND c.district = ${} = ~V ' 
+    'AND c.warehouse = ${} = ~V ', name = 'ordStatGetCustBal' )
 
-ordStatGetOrder = RepeatedQuery('''
-SELECT o.carrier_id, o.entry_d 
-FROM order o
-WHERE o.warehouse = ${} = ~V  
-AND o.district = ${} = ~V  
-AND o.customer = ${} = ~V  
-AND o.order = ${} = ~V ''',
-name = 'ordStatGetOrder' )
+ordStatGetOrder = RepeatedQuery(
+    'SELECT o.carrier_id, o.entry_d '
+    'FROM order o '
+    'WHERE o.warehouse = ${} = ~V ' 
+    'AND o.district = ${} = ~V ' 
+    'AND o.customer = ${} = ~V ' 
+    'AND o.order = ${} = ~V ', name = 'ordStatGetOrder' )
 
-ordStatGetOrderLines = RepeatedQuery('''
-SELECT ol.item, ol.supply_warehouse, ol.quantity,
-    ol.amount, ol.delivery_d 
-FROM order_line ol
-WHERE ol.order = ${} = ~V  
-AND ol.district =${} = ~V  
-AND ol.warehouse = ${} = ~V ''',
-name = 'ordStatGetOrderLines' )
+ordStatGetOrderLines = RepeatedQuery(
+    'SELECT ol.item, ol.supply_warehouse, ol.quantity, '
+    'ol.amount, ol.delivery_d '
+    'FROM order_line ol '
+    'WHERE ol.order = ${} = ~V ' 
+    'AND ol.district =${} = ~V ' 
+    'AND ol.warehouse = ${} = ~V ', name = 'ordStatGetOrderLines' )
 
-delivGetOrderId = RepeatedQuery('''
-SELECT no.order
-FROM new_order no
-WHERE no.district = ${} = ~V  
-AND no.warehouse = ${} = ~V  
-ORDER BY order ASC''',
-name = 'delivGetOrderId' )
+delivGetOrderId = RepeatedQuery(
+    'SELECT no.order '
+    'FROM new_order no '
+    'WHERE no.district = ${} = ~V ' 
+    'AND no.warehouse = ${} = ~V ' 
+    'ORDER BY order ASC', name = 'delivGetOrderId' )
 
-delivDeleteNewOrder = RepeatedQuery('''
-DELETE FROM new_order no 
-WHERE no.district = ${} = ~V  
-AND no.warehouse = ${} = ~V  
-AND no.order = ${} = ~V ''',
-name = 'delivDeleteNewOrder' )
+delivDeleteNewOrder = RepeatedQuery(
+    'DELETE FROM new_order no '
+    'WHERE no.district = ${} = ~V ' 
+    'AND no.warehouse = ${} = ~V ' 
+    'AND no.order = ${} = ~V ', name = 'delivDeleteNewOrder' )
 
-delivGetCustId = RepeatedQuery('''
-SELECT o.customer
-FROM order o
-WHERE o.order = ${} = ~V  
-AND o.district = ${} = ~V  
-AND o.warehouse = ${} = ~V ''',
-name = 'delivGetCustId' )
+delivGetCustId = RepeatedQuery(
+    'SELECT o.customer '
+    'FROM order o '
+    'WHERE o.order = ${} = ~V ' 
+    'AND o.district = ${} = ~V ' 
+    'AND o.warehouse = ${} = ~V ', name = 'delivGetCustId' )
 
-delivUpdateCarrierId = RepeatedQuery('''
-UPDATE order o 
-SET carrier_id = ${} = ~V  
-WHERE o.order = ${} = ~V  
-AND o.district = ${} = ~V  
-AND o.warehouse = ${} = ~V ''',
-name = 'delivUpdateCarrierId' )
+delivUpdateCarrierId = RepeatedQuery(
+    'UPDATE order o '
+    'SET carrier_id = ${} = ~V ' 
+    'WHERE o.order = ${} = ~V ' 
+    'AND o.district = ${} = ~V ' 
+    'AND o.warehouse = ${} = ~V ', name = 'delivUpdateCarrierId' )
 
-delivUpdateDeliveryDate = RepeatedQuery('''
-UPDATE order_line ol 
-SET delivery_d = CURRENT_TIME  
-WHERE ol.order = ${} = ~V  
-AND ol.district = ${} = ~V  
-AND ol.warehouse = ${} = ~V ''',
-name = 'delivUpdateDeliveryDate' )
+delivUpdateDeliveryDate = RepeatedQuery(
+    'UPDATE order_line ol '
+    'SET delivery_d = CURRENT_TIME ' 
+    'WHERE ol.order = ${} = ~V ' 
+    'AND ol.district = ${} = ~V ' 
+    'AND ol.warehouse = ${} = ~V ', name = 'delivUpdateDeliveryDate' )
 
-delivSumOrderAmount = RepeatedQuery('''
-SELECT SUM(amount) AS total 
-FROM order_line ol
-WHERE ol.order = ${} = ~V  
-AND ol.district = ${} = ~V  
-AND ol.warehouse = ${} = ~V ''',
-name = 'delivSumOrderAmount' )
+delivSumOrderAmount = RepeatedQuery(
+    'SELECT SUM(amount) AS total '
+    'FROM order_line ol '
+    'WHERE ol.order = ${} = ~V ' 
+    'AND ol.district = ${} = ~V ' 
+    'AND ol.warehouse = ${} = ~V ', name = 'delivSumOrderAmount' )
 
-delivUpdateCustBalDelivCnt = RepeatedQuery('''
-UPDATE customer c
-SET balance = balance+${} = ~V , delivery_cnt = delivery_cnt+1 
-WHERE c.customer = ${} = ~V  
-AND c.district = ${} = ~V  
-AND c.warehouse = ${} = ~V ''',
-name = 'delivUpdateCustBalDelivCnt' )
+delivUpdateCustBalDelivCnt = RepeatedQuery(
+    'UPDATE customer c '
+    'SET balance = balance+${} = ~V , delivery_cnt = delivery_cnt+1 '
+    'WHERE c.customer = ${} = ~V ' 
+    'AND c.district = ${} = ~V ' 
+    'AND c.warehouse = ${} = ~V ', name = 'delivUpdateCustBalDelivCnt' )
 
 
 ##  alias random.randint to make reference to the TPC-C spec obvious
