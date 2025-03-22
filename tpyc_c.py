@@ -8,6 +8,9 @@ import random
 import time
 import xxhash
 
+import .Exceptions
+import .RepeatedQuery
+
 ##  we use xxhash to generate cross-platform stable "compile-time" 
 ##  repeated query IDs
 
@@ -35,82 +38,6 @@ class NullabilityError(Exception):
 class KeyError(Exception):
     def __init__(self,msg):
         self.msg=msg
-
-
-class RepeatedQuery():
-    '''repeated SQL query details'''
-
-    def __init__(self,sql,name=None):
-        '''make query repeatable and publishable'''
-
-        ##  number the placeholders
-        placeholder = '${} = ~V '
-        self._parmCount = sql.count(placeholder) 
-        ns = [i for i in range(n)]
-        _sql = sql.format(*ns)
-        self._queryText = _sql.encode()
-
-        self.reptHandle = None
-        self._hisig = None
-        self._losig = None
-        self._name = None
-
-        ##  repeated queries can be published or not; published queries are 
-        ##  named and have a signature
-
-        publish = True if name else False
-        if publish:
-            if not name.isascii():
-                raise ValueError('name contains non-ASCII character(s)')
-            try:
-                _name = name.encode()
-            except AttributeError:
-                if type(name) is bytes:
-                    _name = name
-                else:
-                    raise
-            ##  pad name to full extent with blanks
-            self._name = _name.ljust(64,b' ')
-
-            ##  use xxhash to generate a stable cross-platform signature
-            signature = xxhash.xxh64(_sql).intdigest()
-            self._hisig = signature >> 32 
-            self._losig = signature & 0xFFFFFFFF    
-
-
-    ##  expose immutable attributes
-
-    @property
-    def queryText(self):
-        return self._queryText
-
-
-    @property
-    def parmCount(self):
-        return self._parmCount
-
-
-    @property
-    def isPublished(self):
-        return True if self._name else False
-
-
-    @property
-    def hisig(self):
-        return self._hisig
-
-
-    @property
-    def losig(self):
-        return self._losig
-
-
-    @property
-    def name(self):
-        return self._name
-
-    def __str__():
-        return self._sql
 
 
 stmtGetCustWhse = RepeatedQuery(
