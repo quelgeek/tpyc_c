@@ -41,10 +41,10 @@ class RepeatedQuery():
     '''repeated SQL query details'''
 
     def __init__(self,sql,name=None):
-        '''initialize a RepeatedQuery description'''
+        '''make query repeatable and publishable'''
 
         ##  number the placeholders
-        placeholder = '${} = ~V'
+        placeholder = '${} = ~V '
         self._parmCount = sql.count(placeholder) 
         ns = [i for i in range(n)]
         _sql = sql.format(*ns)
@@ -108,6 +108,9 @@ class RepeatedQuery():
     @property
     def name(self):
         return self._name
+
+    def __str__():
+        return self._sql
 
 
 stmtGetCustWhse = RepeatedQuery(
@@ -342,6 +345,7 @@ delivUpdateCustBalDelivCnt = RepeatedQuery(
 ##  alias random.randint to make reference to the TPC-C spec obvious
 TPCC_random = random.randint
 
+
 def TPCC_NU_random(x, min, max):
     '''return a non-uniform random number using the TPC-C algorithm'''
 
@@ -409,7 +413,7 @@ class Terminal():
     async def connect(self,target):
         target = target.encode()
         inp = py.IIAPI_INITPARM()
-        inp.in_version = py.IIAPI_VERSION_11
+        inp.in_version = py.IIAPI_VERSION
         inp.in_timeout = -1
         py.IIapi_initialize(inp)
 
