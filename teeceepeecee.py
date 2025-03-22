@@ -1193,25 +1193,23 @@ async def workload(dbname, n_teminals, tx_limit, time_limit):
     await asyncio.gather(*tasks)
    
 
-if __name__ == '__main__':
-    import argparse
+##  run the benchmark (such as it is)
 
-    parser = argparse.ArgumentParser(description='Run some Actian workload.')
-    parser.add_argument('dbname',
-        help = 'target vnode, database, and server class' )
-    parser.add_argument('-n', type=int,
-        help = 'number (<= 10) of warehouse terminals to run' )    
-    parser.add_argument('-c', type=int,
-        help = 'count of transactions to execute' )    
-    parser.add_argument('-d', type=int,
-        help = 'duration of execution in seconds')
+import argparse
+parser = argparse.ArgumentParser(description='Run some Actian workload.')
+parser.add_argument('dbname',
+    help = 'target vnode, database, and server class' )
+parser.add_argument('-n', type=int,
+    help = 'number (<= 10) of warehouse terminals to run' )    
+parser.add_argument('-c', type=int,
+    help = 'count of transactions to execute' )    
+parser.add_argument('-d', type=int,
+    help = 'duration of execution in seconds')
 
-    args = parser.parse_args()
-    dbname = args.dbname
-    n_terminals = args.n or 10
-    tx_limit = args.c
-    time_limit = args.d
-    logger.info(f'{dbname=},{n_terminals=},{tx_limit=},{time_limit=}')
-    asyncio.run(workload(dbname, n_terminals, tx_limit, time_limit))
-
-
+args = parser.parse_args()
+dbname = args.dbname
+n_terminals = args.n or 10
+tx_limit = args.c
+time_limit = args.d
+logger.info(f'{dbname=},{n_terminals=},{tx_limit=},{time_limit=}')
+asyncio.run(workload(dbname, n_terminals, tx_limit, time_limit))
