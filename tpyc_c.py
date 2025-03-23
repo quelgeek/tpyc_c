@@ -43,21 +43,21 @@ class KeyError(Exception):
 stmtGetCustWhse = RepeatedQuery(
     'SELECT c.discount, c.last, c.credit, w.tax '
     'FROM customer c, warehouse w '
-    'WHERE w.warehouse = ${} ~V '
+    'WHERE w.warehouse = ${} = ~V '
     'AND w.warehouse = c.warehouse '
-    'AND c.district = ${} ~V '
-    'AND c.customer = ${} ~V ', name='stmtGetCustWhse' )
+    'AND c.district = ${} = ~V '
+    'AND c.customer = ${} = ~V ', name='stmtGetCustWhse' )
 
 stmtGetDist = RepeatedQuery(
     'SELECT d.next_o_id, float4(d.tax) as tax '
     'FROM district d '
-    'WHERE d.district = ${} ~V '
-    'AND d.warehouse = ${} ~V '
+    'WHERE d.district = ${} = ~V '
+    'AND d.warehouse = ${} = ~V '
     'FOR UPDATE', name = 'stmtGetDist' )
 
 stmtInsertNewOrder = RepeatedQuery(
     'INSERT INTO new_order (order, district, warehouse) ' 
-    'VALUES ( ${} ~V , ${} ~V , ${} ~V )', name = 'stmtInsertNewOrder' )
+    'VALUES ( ${} = ~V , ${} = ~V , ${} = ~V )', name = 'stmtInsertNewOrder' )
 
 stmtUpdateDist = RepeatedQuery(
     'UPDATE district d '
