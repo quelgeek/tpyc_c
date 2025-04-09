@@ -1,3 +1,6 @@
+import pyngres as py
+import iitypes as ii
+import ctypes
 import xxhash
 
 class Query():
@@ -7,17 +10,17 @@ class Query():
     ##  to ever instantiate it. The useful subclasses are RepeatedQuery()
     ##  and PreparedQuery()
     
-    ##  parameterized queries always use the repeated query placeholder.
-    ##  If the query is a PreparedQuery we replace it with "? "
+    ##  parameterized queries always expect the REPEATED query placeholder
     _placeholder = '${} = ~V '
 
 
     def __init__(self,sql,name=None):
         if self._placeholder in sql:
             raise RuntimeError(
-                'sql contains placeholder(s).'
+                'sql contains placeholder(s). '
                 'Use RepeatedQuery() or PreparedQuery()')
         self._parmCount = 0
+        self._name = name
         self._queryText = _sql.encode()
 
 
@@ -44,7 +47,7 @@ class Query():
 class PreparedQuery(Query):
     
     def __init__(self,sql,name=None):
-        raise NotImpementedError        
+        raise NotImplementedError        
 
 
 class RepeatedQuery(Query):
@@ -59,7 +62,10 @@ class RepeatedQuery(Query):
         _sql = sql.format(*ns)
         self._queryText = _sql.encode()
 
-        self.reptHandle = None
+        #self.reptHandle = py.II_PTR(None)
+        self._reptHandle = None
+        self._queryHandle = ii.IIAPI_HNDL_TYPE(
+            ctypes.c_void_p(self._reptHandle))
         self._hisig = None
         self._losig = None
         self._name = None
@@ -78,13 +84,29 @@ class RepeatedQuery(Query):
                     _name = name
                 else:
                     raise
-            ##  pad name to full extent with blanks
-            self._name = _name.ljust(64,b' ')
+            self._queryName = ii.Char(_name,64)
+            #self._name = _name.ljust(64,b' ')
 
             ##  use xxhash to generate a stable cross-platform signature
             signature = xxhash.xxh64(_sql).intdigest()
-            self._hisig = signature >> 32 
-            self._losig = signature & 0xFFFFFFFF    
+            _hisig = signature >> 32 
+            _losig = signature & 0xFFFFFFFF    
+            self._hisig = ii.Integer(ctypes.c_int32(_hisig).value)
+            self._losig = ii.Integer(ctypes.c_int32(_losig).value)
+
+
+    @property
+    def reptHandle(self):
+        return self._reptHandle
+
+
+    @reptHandle.setter
+    def reptHandle(self, handle):
+        '''intercept new reptHandle values'''
+        self._reptHandle = handle
+        ##  create an IIAPI_HNDL_TYPE for the repeated query handle
+        self._queryHandle = ii.IIAPI_HNDL_TYPE(
+            ctypes.c_void_p(self._reptHandle))
 
 
     ##  expose immutable attributes
@@ -96,12 +118,27 @@ class RepeatedQuery(Query):
 
     @property
     def hisig(self):
+        '''return the high-order half of the query ID as iitypes.Integer'''
+
         return self._hisig
 
 
     @property
     def losig(self):
+        '''return the low-order half of the query ID as iitypes.Integer'''
+
         return self._losig
 
 
+    @property
+    def queryName(self):
+        '''return the query name as iitypes.Char'''
 
+        return self._queryName
+
+
+    @property
+    def queryHandle(self):
+        '''return the repeatQueryHandle as iitypes.IIAPI_HNDL_TYPE'''
+
+        return self._queryHandle
