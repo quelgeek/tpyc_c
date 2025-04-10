@@ -3,6 +3,8 @@ import ctypes
 import random
 import pyngres.asyncio as py
 import iitypes as ii
+
+import TPCC_random as tpc
 from Exceptions import UnknownReptHandle, NullabilityError, KeyError
 from Query import RepeatedQuery, PreparedQuery
 from loguru import logger
@@ -345,7 +347,7 @@ class Level(Work):
         next_o_id = result_set[0]['next_o_id']
         logger.success(f'{next_o_id=}')
 
-        threshold = TPCC_random(10,20)
+        threshold = tpc.TPCC_random(10,20)
         parms = (self.warehouse, self.district,
             next_o_id, next_o_id, self.warehouse, threshold)
         rows = await self._invoke_repeated_sql(
