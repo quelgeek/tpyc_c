@@ -83,15 +83,6 @@ class Connection():
         await py.IIapi_disconnect(dcp)
         self.connHandle = None
         
-        rep = py.IIAPI_RELENVPARM()
-        rep.re_envHandle = self.envHandle
-        py.IIapi_releaseEnv(rep)
-        self.envHandle = None
-
-        tmp = py.IIAPI_TERMPARM()
-        py.IIapi_terminate(tmp)
-
-
     def handles(self):
         '''return the session handles'''
 

@@ -3,6 +3,8 @@ import iitypes as ii
 import ctypes
 import xxhash
 
+query_store = {}
+
 class Query():
     '''base class for Actian OpenAPI queries'''
 
@@ -15,13 +17,17 @@ class Query():
 
 
     def __init__(self,sql,name=None):
-        if self._placeholder in sql:
-            raise RuntimeError(
-                'sql contains placeholder(s). '
-                'Use RepeatedQuery() or PreparedQuery()')
+#        if self._placeholder in sql:
+#            raise RuntimeError(
+#                'sql contains placeholder(s). '
+#                'Use RepeatedQuery() or PreparedQuery()')
         self._parmCount = 0
         self._name = name
-        self._queryText = _sql.encode()
+        self._queryText = sql.encode()
+
+        ##  lodge the query in query_store
+        if name:
+            query_store[name] = self
 
 
     ##  expose immutable attributes
@@ -47,6 +53,7 @@ class Query():
 class PreparedQuery(Query):
     
     def __init__(self,sql,name=None):
+        super().__init__(sql,name)
         raise NotImplementedError        
 
 
@@ -55,6 +62,7 @@ class RepeatedQuery(Query):
 
     def __init__(self,sql,name=None):
         '''make query repeatable and publishable'''
+        super().__init__(sql,name)
 
         ##  number the placeholders
         n = self._parmCount = sql.count(self._placeholder) 

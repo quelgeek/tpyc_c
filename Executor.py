@@ -6,8 +6,9 @@ import iitypes as ii
 
 import TPCC_random as tpc
 from Exceptions import UnknownReptHandle, NullabilityError, KeyError
-from Query import RepeatedQuery, PreparedQuery
 from loguru import logger
+#from Query import RepeatedQuery, PreparedQuery
+import Query as qy
 
 
 class Work():
@@ -50,9 +51,13 @@ class Work():
 
         ##  run the repeated query; define it if it's not known
         try:
+            attempted_handle = query.reptHandle
             result_set = await self._attempt_repeated_sql(query, *parms)
         except UnknownReptHandle:
-            await self._define_repeated_sql(query, *parms)
+            ##  if the query_handle is unchanged (re-)define the query
+            if query.reptHandle == attempted_handle:
+                await self._define_repeated_sql(query, *parms)
+            ##  if it fails again, let it
             result_set = await self._attempt_repeated_sql(query, *parms)
 
         return result_set
@@ -60,8 +65,6 @@ class Work():
 
     async def _define_repeated_sql(self, query, *query_parms):
         '''publish a query for repeated execution'''
-
-        ##  this function needs to block (?maybe?) <-- FIX ME
 
         ##  initiate the repeated query definition protocol
         session = self.session
@@ -272,9 +275,9 @@ class Work():
                 row = tuple.copy()
                 body.append(row)
 
-            cnp = py.IIAPI_CANCELPARM()
-            cnp.cn_stmtHandle = qyp.qy_stmtHandle
-            await py.IIapi_cancel(cnp)
+#            cnp = py.IIAPI_CANCELPARM()
+#            cnp.cn_stmtHandle = qyp.qy_stmtHandle
+#            await py.IIapi_cancel(cnp)
 
         ##  free resources
         clp = py.IIAPI_CLOSEPARM()
@@ -308,42 +311,48 @@ class Level(Work):
     def __init__(self, terminal):
         super().__init__(terminal)
 
-        stockGetDistOrderId_text = (
-            'SELECT d.next_o_id '
-            'FROM district d '
-            'WHERE d.warehouse = ${} = ~V ' 
-            'AND d.district = ${} = ~V ')
+        name = 'stockGetDistOrderId'
+        if name not in qy.query_store:
+            stockGetDistOrderId_text = (
+                'SELECT d.next_o_id '
+                'FROM district d '
+                'WHERE d.warehouse = ${} = ~V ' 
+                'AND d.district = ${} = ~V ')
 
-        self.repeated_stockGetDistOrderId = RepeatedQuery(
-            stockGetDistOrderId_text,
-            name = 'stockGetDistOrderId' )
-#        self.prepared_stockGetDistOrderId = PreparedQuery(
-#            stockGetDistOrderId_text,
-#            name = 'stockGetDistOrderId' )
+            qy.RepeatedQuery( stockGetDistOrderId_text, name )
 
-        stockGetCountStock_text = (
-            'SELECT COUNT(DISTINCT (s.item)) AS stock_count ' 
-            'FROM order_line ol, stock s '
-            'WHERE ol.warehouse = ${} = ~V '
-            'AND ol.district = ${} = ~V ' 
-            'AND ol.order < ${} = ~V AND ol.order >= ${} = ~V - 20 ' 
-            'AND s.warehouse = ${} = ~V ' 
-            'AND s.item = ol.item '
-            'AND s.quantity < ${} = ~V ')
+#           self.prepared_stockGetDistOrderId = qy.PreparedQuery(
+#               stockGetDistOrderId_text,
+#               name = 'stockGetDistOrderId' )
 
-        self.repeated_stockGetCountStock = RepeatedQuery(
-            stockGetCountStock_text,
-            name = 'stockGetCountStock' )
-#        self.prepared_stockGetCountStock = PreparedQuery(
-#            stockGetCountStock_text,
-#            name = 'stockGetCountStock' )
+        self.repeated_stockGetDistOrderId = qy.query_store[name]
+
+
+        name = 'stockGetCountStock'
+        if name not in qy.query_store:
+            stockGetCountStock_text = (
+                'SELECT COUNT(DISTINCT (s.item)) AS stock_count ' 
+                'FROM order_line ol, stock s '
+                'WHERE ol.warehouse = ${} = ~V '
+                'AND ol.district = ${} = ~V ' 
+                'AND ol.order < ${} = ~V AND ol.order >= ${} = ~V - 20 ' 
+                'AND s.warehouse = ${} = ~V ' 
+                'AND s.item = ol.item '
+                'AND s.quantity < ${} = ~V ')
+
+            qy.RepeatedQuery( stockGetCountStock_text, name )
+
+#            self.prepared_stockGetCountStock = qy.PreparedQuery(
+#                stockGetCountStock_text,
+#                name = 'stockGetCountStock' )
+
+        self.repeated_stockGetCountStock = qy.query_store[name]
 
 
     async def using_repeated(self):
         '''perform stock level processing using repeated queries'''
 
         
-        logger.info(f'Entering with {self.session.tranHandle=}')
         parms = (self.warehouse, self.district)
         result_set = await self._invoke_repeated_sql(
             self.repeated_stockGetDistOrderId, *parms)
@@ -366,6 +375,4 @@ class Level(Work):
         else:
             logger.warning('no rows returned')
 
-        logger.info(f'Ending with {self.session.tranHandle=}')
         await self.session.commit()
-        logger.info(f'Exiting with {self.session.tranHandle=}')
