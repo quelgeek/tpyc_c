@@ -170,7 +170,7 @@ class Work():
         session = self.session
         connHandle = session.connHandle
         tranHandle = session.tranHandle
-        queryText = query.queryText
+        #queryText = query.queryText
         queryName = query.queryName.value.strip()
         logger.info(f'invoking repeated query {queryName}')
         qyp = py.IIAPI_QUERYPARM()
@@ -181,6 +181,7 @@ class Work():
         qyp.qy_tranHandle = tranHandle
         qyp.qy_stmtHandle = None
         await py.IIapi_query( qyp );
+        tranHandle = qyp.qy_tranHandle
         stmtHandle = qyp.qy_stmtHandle
 
         parms = (query.queryHandle,) + query_parms
@@ -235,7 +236,7 @@ class Work():
         #await py.IIapi_getQueryInfo( gqp )
 
         ##  fetch the result set, if any
-        rows = None
+        body = None
         if gdp.gd_descriptorCount > 0:
 
             ##  set up the tuple buffer list
@@ -267,7 +268,8 @@ class Work():
                 await py.IIapi_getColumns(gcp)
                 if gcp.gc_genParm.gp_status != py.IIAPI_ST_SUCCESS:
                     break
-                row = {attrName: attr.value for attrName,attr in tuple.items()}
+                #row = {attrName: attr.value for attrName,attr in tuple.items()}
+                row = tuple.copy()
                 body.append(row)
 
             cnp = py.IIAPI_CANCELPARM()
@@ -341,18 +343,29 @@ class Level(Work):
         '''perform stock level processing using repeated queries'''
 
         
+        logger.info(f'Entering with {self.session.tranHandle=}')
         parms = (self.warehouse, self.district)
         result_set = await self._invoke_repeated_sql(
             self.repeated_stockGetDistOrderId, *parms)
-        next_o_id = result_set[0]['next_o_id']
-        logger.success(f'{next_o_id=}')
+        if result_set:
+            next_o_id = result_set[0]['next_o_id']
+            value = next_o_id.value
+            logger.success(f'next_o_id={value}')
+        else:
+            logger.warning('no rows returned')
 
-        threshold = tpc.TPCC_random(10,20)
+        threshold = ii.Integer(tpc.TPCC_random(10,20))
         parms = (self.warehouse, self.district,
             next_o_id, next_o_id, self.warehouse, threshold)
-        rows = await self._invoke_repeated_sql(
-            self.prepared_stockGetCountStock, *parms)
-        stock_count = rows[0]['stock_count']
-        logger.success(f'{stock_count=}')
+        result_set = await self._invoke_repeated_sql(
+            self.repeated_stockGetCountStock, *parms)
+        if result_set:
+            stock_count = result_set[0]['stock_count']
+            value = stock_count.value
+            logger.success(f'stock_count={value}')
+        else:
+            logger.warning('no rows returned')
 
-        await session.commit()
+        logger.info(f'Ending with {self.session.tranHandle=}')
+        await self.session.commit()
+        logger.info(f'Exiting with {self.session.tranHandle=}')
