@@ -8,12 +8,14 @@ import TPCC_random as tpc
 from Exceptions import UnknownReptHandle, NullabilityError, KeyError
 from loguru import logger
 import Query as qy
+from ErrorHandler import errorCheck
 
 
 class Work():
     '''abstract class for workload'''
 
     def __init__(self, terminal):
+        self.terminal = terminal
         self.session = terminal.session
         self.warehouse = ii.Integer(terminal.warehouse)
         self.district = ii.Integer(terminal.district)
@@ -71,7 +73,7 @@ class Work():
         tranHandle = session.tranHandle
         queryText = query.queryText
         queryName = query.queryName.value.strip()
-        logger.info(f'defining repeated query {queryName}')
+        logger.info(f'{self.terminal.name} defining repeated query {queryName}')
         qyp = py.IIAPI_QUERYPARM()
         qyp.qy_connHandle = connHandle
         qyp.qy_queryType = py.IIAPI_QT_DEF_REPEAT_QUERY
@@ -80,7 +82,7 @@ class Work():
         qyp.qy_tranHandle = tranHandle
         qyp.qy_stmtHandle = None
         await py.IIapi_query( qyp )
-        ##  <-- FIX ME add error detection
+        errorCheck(qyp.qy_genParm)
         tranHandle = qyp.qy_tranHandle
         stmtHandle = qyp.qy_stmtHandle
 
@@ -99,7 +101,7 @@ class Work():
                 parm.descriptor.ds_columnType = py.IIAPI_COL_QPARM
             sdp.sd_descriptor[index] = parm.descriptor 
         await py.IIapi_setDescriptor( sdp )
-        ##  <-- FIX ME add error detection
+        errorCheck(sdp.sd_genParm)
 
         ##  send the parm datavalues
         datavalues = (py.IIAPI_DATAVALUE * descriptorCount)()
@@ -110,19 +112,23 @@ class Work():
         for index, parm in enumerate(parms):
             ppp.pp_parmData[index] = parm.datavalue
         await py.IIapi_putParms( ppp )
+        errorCheck(ppp.pp_genParm)
 
         ##  get repeat results
         gqp = py.IIAPI_GETQINFOPARM()
         gqp.gq_stmtHandle = stmtHandle
         await py.IIapi_getQueryInfo( gqp )
+        errorCheck(gqp.gq_genParm)
         if gqp.gq_mask & py.IIAPI_GQ_REPEAT_QUERY_ID:
             ##  save the repeated query handle for reuse
             query.reptHandle = gqp.gq_repeatQueryHandle
+            logger.info(f'{self.terminal.name}: {query.reptHandle=}')
 
         ##  free resources
         clp = py.IIAPI_CLOSEPARM()
         clp.cl_stmtHandle = stmtHandle
         await py.IIapi_close( clp )
+        errorCheck(clp.cl_genParm)
 
         session.tranHandle = tranHandle
 
@@ -148,7 +154,9 @@ class Work():
         qyp.qy_tranHandle = tranHandle
         qyp.qy_stmtHandle = None
         await py.IIapi_query( qyp );
+        errorCheck(qyp.qy_genParm)
         tranHandle = qyp.qy_tranHandle
+        session.tranHandle = tranHandle
         stmtHandle = qyp.qy_stmtHandle
 
         parms = (query.queryHandle,) + query_parms
@@ -167,6 +175,7 @@ class Work():
                 parm.descriptor.ds_columnType = py.IIAPI_COL_QPARM
             sdp.sd_descriptor[index] = parm.descriptor
         await py.IIapi_setDescriptor( sdp )
+        errorCheck(sdp.sd_genParm)
 
         ##  send the arguments
         datavalues = (py.IIAPI_DATAVALUE * descriptorCount)()
@@ -177,12 +186,34 @@ class Work():
         for index, parm in enumerate(parms):
             ppp.pp_parmData[index] = parm.datavalue
         await py.IIapi_putParms( ppp )
+        errorCheck(ppp.pp_genParm)
 
         ##  get the result/tuple descriptor
         gdp = py.IIAPI_GETDESCRPARM()
         gdp.gd_stmtHandle = qyp.qy_stmtHandle
         await py.IIapi_getDescriptor(gdp)
- 
+        errorCheck(gdp.gd_genParm)
+        if gdp.gd_genParm.gp_status != py.IIAPI_ST_SUCCESS:
+            ##  see if the repeated query handle is invalidated
+            gqp = py.IIAPI_GETQINFOPARM()
+            gqp.gq_stmtHandle = qyp.qy_stmtHandle;
+            await py.IIapi_getQueryInfo( gqp )
+            errorCheck(gqp.gq_genParm)
+            flags = gqp.gq_flags
+            if flags & py.IIAPI_GQF_UNKNOWN_REPEAT_QUERY:
+                ##  end this attempt and raise UnknownReptHandle
+                cnp = py.IIAPI_CANCELPARM()
+                cnp.cn_stmtHandle = stmtHandle
+                await py.IIapi_cancel(cnp)
+                ##  unusually, we want to see IAPI_ST_FAILURE here
+                logger.info(f'CANCELLING ({cnp.cn_genParm.gp_status=})')
+                ##  close the query
+                clp = py.IIAPI_CLOSEPARM()
+                clp.cl_stmtHandle = stmtHandle
+                await py.IIapi_close(clp)
+                errorCheck(clp.cl_genParm)
+                raise UnknownReptHandle
+
         ##  fetch the result set, if any
         body = None
         if gdp.gd_descriptorCount > 0:
@@ -214,17 +245,24 @@ class Work():
             gcp.gc_stmtHandle = qyp.qy_stmtHandle
             while True:
                 await py.IIapi_getColumns(gcp)
+                errorCheck(gcp.gc_genParm)
                 if gcp.gc_genParm.gp_status != py.IIAPI_ST_SUCCESS:
                     break
                 row = tuple.copy()
                 body.append(row)
+                
+        ##  check for query information
+        gqp = py.IIAPI_GETQINFOPARM()
+        gqp.gq_stmtHandle = qyp.qy_stmtHandle;
+        await py.IIapi_getQueryInfo( gqp )
+        errorCheck(gqp.gq_genParm)
 
         ##  free resources
         clp = py.IIAPI_CLOSEPARM()
         clp.cl_stmtHandle = stmtHandle
         await py.IIapi_close( clp )
+        errorCheck(clp.cl_genParm)
 
-        session.tranHandle = tranHandle
 
         return body
 
