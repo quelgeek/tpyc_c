@@ -7,7 +7,6 @@ import iitypes as ii
 import TPCC_random as tpc
 from Exceptions import UnknownReptHandle, NullabilityError, KeyError
 from loguru import logger
-#from Query import RepeatedQuery, PreparedQuery
 import Query as qy
 
 
@@ -93,27 +92,6 @@ class Work():
         sdp.sd_stmtHandle = stmtHandle
         sdp.sd_descriptorCount = descriptorCount
         sdp.sd_descriptor = descriptors
-        #sdp.sd_descriptor[0].ds_dataType = py.IIAPI_INT_TYPE
-        #sdp.sd_descriptor[0].ds_nullable = False
-        #sdp.sd_descriptor[0].ds_length = 4
-        #sdp.sd_descriptor[0].ds_precision = 0
-        #sdp.sd_descriptor[0].ds_scale = 0
-        #sdp.sd_descriptor[0].ds_columnType = py.IIAPI_COL_SVCPARM
-        #sdp.sd_descriptor[0].ds_columnName = None
-        #sdp.sd_descriptor[1].ds_dataType = py.IIAPI_INT_TYPE
-        #sdp.sd_descriptor[1].ds_nullable = False
-        #sdp.sd_descriptor[1].ds_length = 4
-        #sdp.sd_descriptor[1].ds_precision = 0
-        #sdp.sd_descriptor[1].ds_scale = 0
-        #sdp.sd_descriptor[1].ds_columnType = py.IIAPI_COL_SVCPARM
-        #sdp.sd_descriptor[1].ds_columnName = None
-        #sdp.sd_descriptor[2].ds_dataType = py.IIAPI_CHA_TYPE
-        #sdp.sd_descriptor[2].ds_nullable = False
-        #sdp.sd_descriptor[2].ds_length = 64
-        #sdp.sd_descriptor[2].ds_precision = 0
-        #sdp.sd_descriptor[2].ds_scale = 0
-        #sdp.sd_descriptor[2].ds_columnType = py.IIAPI_COL_SVCPARM
-        #sdp.sd_descriptor[2].ds_columnName = None
         for index, parm in enumerate(parms):
             if index in (0,1,2):
                 parm.descriptor.ds_columnType = py.IIAPI_COL_SVCPARM
@@ -129,19 +107,6 @@ class Work():
         ppp.pp_stmtHandle = stmtHandle
         ppp.pp_parmCount = descriptorCount
         ppp.pp_parmData = datavalues
-        #ppp.pp_moreSegments = 0
-        #hisig = query.hisig
-        #losig = query.losig
-        #queryName = query.name
-        #ppp.pp_parmData[0].dv_null = False
-        #ppp.pp_parmData[0].dv_length = 4
-        #ppp.pp_parmData[0].dv_value = ctypes.addressof(hisig)
-        #ppp.pp_parmData[1].dv_null = False
-        #ppp.pp_parmData[1].dv_length = 4
-        #ppp.pp_parmData[1].dv_value = ctypes.addressof(losig)
-        #ppp.pp_parmData[2].dv_null = False
-        #ppp.pp_parmData[2].dv_length = 64
-        #ppp.pp_parmData[2].dv_value = ctypes.addressof(queryName)
         for index, parm in enumerate(parms):
             ppp.pp_parmData[index] = parm.datavalue
         await py.IIapi_putParms( ppp )
@@ -173,7 +138,6 @@ class Work():
         session = self.session
         connHandle = session.connHandle
         tranHandle = session.tranHandle
-        #queryText = query.queryText
         queryName = query.queryName.value.strip()
         logger.info(f'invoking repeated query {queryName}')
         qyp = py.IIAPI_QUERYPARM()
@@ -196,14 +160,6 @@ class Work():
         sdp.sd_descriptorCount = descriptorCount
         sdp.sd_descriptor = descriptors        
         ##  the query handle is the first parameter
-        #descriptors[0].ds_dataType = py.IIAPI_HNDL_TYPE
-        #descriptors[0].ds_length = ctypes.sizeof(py.II_PTR)
-        #descriptors[0].ds_nullable = False
-        #descriptors[0].ds_precision = 0
-        #descriptors[0].ds_scale = 0
-        #descriptors[0].ds_columnType = py.IIAPI_COL_SVCPARM
-        ##  add the descriptor of any additional parameters
-        #for i, descriptor in enumerate(parmCount):
         for index, parm in enumerate(parms):
             if index == 0:
                 parm.descriptor.ds_columnType = py.IIAPI_COL_SVCPARM
@@ -212,18 +168,12 @@ class Work():
             sdp.sd_descriptor[index] = parm.descriptor
         await py.IIapi_setDescriptor( sdp )
 
-        ##  send the parameter
-        #reptHandle = query.reptHandle
+        ##  send the arguments
         datavalues = (py.IIAPI_DATAVALUE * descriptorCount)()
         ppp = py.IIAPI_PUTPARMPARM()
         ppp.pp_stmtHandle = stmtHandle
         ppp.pp_parmCount = descriptorCount
         ppp.pp_parmData = datavalues        
-        ##  the query handle is the first parameter
-        #parmData[0].dv_null = False
-        #parmData[0].dv_length = ctypes.sizeof(py.II_PTR)
-        #parmData[0].dv_value = ctypes.addressof(reptHandle)
-        ##  add any additional parameters
         for index, parm in enumerate(parms):
             ppp.pp_parmData[index] = parm.datavalue
         await py.IIapi_putParms( ppp )
@@ -233,11 +183,6 @@ class Work():
         gdp.gd_stmtHandle = qyp.qy_stmtHandle
         await py.IIapi_getDescriptor(gdp)
  
-        ##  get repeat results
-        #gqp = py.IIAPI_GETQINFOPARM()
-        #gqp.gq_stmtHandle = stmtHandle
-        #await py.IIapi_getQueryInfo( gqp )
-
         ##  fetch the result set, if any
         body = None
         if gdp.gd_descriptorCount > 0:
@@ -271,13 +216,8 @@ class Work():
                 await py.IIapi_getColumns(gcp)
                 if gcp.gc_genParm.gp_status != py.IIAPI_ST_SUCCESS:
                     break
-                #row = {attrName: attr.value for attrName,attr in tuple.items()}
                 row = tuple.copy()
                 body.append(row)
-
-#            cnp = py.IIAPI_CANCELPARM()
-#            cnp.cn_stmtHandle = qyp.qy_stmtHandle
-#            await py.IIapi_cancel(cnp)
 
         ##  free resources
         clp = py.IIAPI_CLOSEPARM()
