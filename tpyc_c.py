@@ -96,7 +96,19 @@ class Terminal():
         self.session = session
         logger.success(
             f'started {self.name} {self.warehouse=} {self.district=}')
+
+        ##  set session description
+        description = f'\'{self.name} in tpyc_c\''
+        sql = 'SET SESSION WITH DESCRIPTION = ' + description
+        sql = sql.encode()
+        await session.execute(sql)
+
+        ##  select MVCC as the isolation mechanism
+        sql = 'SET LOCKMODE SESSION WHERE LEVEL = MVCC'
+        sql = sql.encode()
+        await session.execute(sql)
         
+        ##  instantiate workload processors
         processor_lookup = {
             'order': Order(self),
             'payment': Executor.Payment(self),

@@ -1,6 +1,8 @@
 import asyncio
 import random
 import pyngres.asyncio as py
+from loguru import logger
+from ErrorHandler import errorCheck
 
 class Connection():
 
@@ -82,6 +84,31 @@ class Connection():
         dcp.dc_connHandle = self.connHandle
         await py.IIapi_disconnect(dcp)
         self.connHandle = None
+
+
+    async def execute(self, queryText):
+        '''execute a non-parameterized SQL statement'''
+        qyp = py.IIAPI_QUERYPARM()
+        qyp.qy_connHandle = self.connHandle
+        qyp.qy_queryType = py.IIAPI_QT_QUERY
+        qyp.qy_queryText = queryText
+        qyp.qy_parameters = False
+        qyp.qy_tranHandle = self.tranHandle
+        await py.IIapi_query( qyp )
+        errorCheck(qyp.qy_genParm)
+        self.tranHandle = qyp.qy_tranHandle
+        self.stmtHandle = qyp.qy_stmtHandle
+
+        gqp = py.IIAPI_GETQINFOPARM()
+        gqp.gq_stmtHandle = self.stmtHandle
+        await py.IIapi_getQueryInfo( gqp )
+        errorCheck(gqp.gq_genParm)
+
+        clp = py.IIAPI_CLOSEPARM()
+        clp.cl_stmtHandle = self.stmtHandle
+        await py.IIapi_close( clp )
+        errorCheck(clp.cl_genParm)
+
         
     def handles(self):
         '''return the session handles'''
