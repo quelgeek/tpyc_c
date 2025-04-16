@@ -3,8 +3,6 @@ import iitypes as ii
 import ctypes
 import xxhash
 
-query_store = {}
-
 class Query():
     '''base class for Actian OpenAPI queries'''
 
@@ -24,11 +22,6 @@ class Query():
         self._parmCount = 0
         self._name = name
         self._queryText = sql.encode()
-
-        ##  lodge the query in query_store
-        if name:
-            query_store[name] = self
-
 
     ##  expose immutable attributes
 
@@ -70,7 +63,6 @@ class RepeatedQuery(Query):
         _sql = sql.format(*ns)
         self._queryText = _sql.encode()
 
-        #self.reptHandle = py.II_PTR(None)
         self._reptHandle = None
         self._queryHandle = ii.IIAPI_HNDL_TYPE(
             ctypes.c_void_p(self._reptHandle))
@@ -93,7 +85,6 @@ class RepeatedQuery(Query):
                 else:
                     raise
             self._queryName = ii.Char(_name,64)
-            #self._name = _name.ljust(64,b' ')
 
             ##  use xxhash to generate a stable cross-platform signature
             signature = xxhash.xxh64(_sql).intdigest()

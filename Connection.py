@@ -67,7 +67,7 @@ class Connection():
 
     async def rollback(self):
         '''ROLLBACK the current transaction'''
-        rbp = IIAPI_ROLLBACKPARM()
+        rbp = py.IIAPI_ROLLBACKPARM()
         rbp.rb_tranHandle = self.tranHandle
         await py.IIapi_rollback(rbp)
 

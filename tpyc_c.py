@@ -14,7 +14,8 @@ from Query import RepeatedQuery, PreparedQuery
 from Connection import Connection
 from config import *
 #import order, payment, level, status, delivery
-#import level
+from level import Level
+from order import Order
 import Executor
 
 parser = argparse.ArgumentParser(description='Run Actian workload.')
@@ -45,24 +46,6 @@ else:
 logger.info(
     f'{dbname=},{n_terminals=},{tx_limit=},{time_limit=},'
     f'{args.repeated=},{args.prepared=}')
-
-
-def get_itemID():
-    ID = tpc.TPCC_NU_random(8191,1,100000)
-    return ID
-
-
-def get_customerID():
-    ID = tpc.TPCC_NU_random(1023,1,3000)
-    return ID
-
-
-def get_lastname():
-    fragment = ['BAR', 'OUGHT', 'ABLE', 'PRI', 'PRES', 'ESE',
-        'ANTI', 'CALLY', 'ATION', 'EING']
-    num = tpc.TPCC_NU_random(255,0,999)
-    lastname = fragment[num//100] + fragment[(num//10)%10] + fragment[num%10]
-    return lastname
 
 
 def _log_rowcount(rows):
@@ -115,11 +98,11 @@ class Terminal():
             f'started {self.name} {self.warehouse=} {self.district=}')
         
         processor_lookup = {
-            'order': Executor.Order(self),
+            'order': Order(self),
             'payment': Executor.Payment(self),
             'status': Executor.Status(self),
             'delivery': Executor.Delivery(self),
-            'level': Executor.Level(self) }
+            'level': Level(self) }
             
         ##  wait until all the other workers are ready; this would be tidier
         ##  if I used asyncio.Barrier()...but that would require Python 3.11+

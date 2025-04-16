@@ -5,7 +5,7 @@ import pyngres.asyncio as py
 import iitypes as ii
 
 import TPCC_random as tpc
-from Exceptions import UnknownReptHandle, NullabilityError, KeyError
+from Exceptions import *
 from loguru import logger
 import Query as qy
 from ErrorHandler import errorCheck
@@ -58,8 +58,8 @@ class Work():
             ##  if the query_handle is unchanged (re-)define the query
             if query.reptHandle == attempted_handle:
                 await self._define_repeated_sql(query, *parms)
-            ##  if it fails again, let it
-            result_set = await self._attempt_repeated_sql(query, *parms)
+                ##  if it fails again, let it
+                result_set = await self._attempt_repeated_sql(query, *parms)
 
         return result_set
 
@@ -73,7 +73,8 @@ class Work():
         tranHandle = session.tranHandle
         queryText = query.queryText
         queryName = query.queryName.value.strip()
-        logger.info(f'{self.terminal.name} defining repeated query {queryName}')
+        logger.info(f'{self.terminal.name}: '
+            f'defining repeated query {queryName}')
         qyp = py.IIAPI_QUERYPARM()
         qyp.qy_connHandle = connHandle
         qyp.qy_queryType = py.IIAPI_QT_DEF_REPEAT_QUERY
@@ -145,7 +146,8 @@ class Work():
         connHandle = session.connHandle
         tranHandle = session.tranHandle
         queryName = query.queryName.value.strip()
-        logger.info(f'invoking repeated query {queryName}')
+        logger.info(f'{self.terminal.name}: ' 
+            f'invoking repeated query {queryName}')
         qyp = py.IIAPI_QUERYPARM()
         qyp.qy_connHandle = connHandle
         qyp.qy_queryType = py.IIAPI_QT_EXEC_REPEAT_QUERY
@@ -283,74 +285,4 @@ class Delivery(Work):
     pass
 
 
-class Level(Work):
-    '''Stock level activity'''
 
-    def __init__(self, terminal):
-        super().__init__(terminal)
-
-        name = 'stockGetDistOrderId'
-        if name not in qy.query_store:
-            stockGetDistOrderId_text = (
-                'SELECT d.next_o_id '
-                'FROM district d '
-                'WHERE d.warehouse = ${} = ~V ' 
-                'AND d.district = ${} = ~V ')
-
-            qy.RepeatedQuery( stockGetDistOrderId_text, name )
-
-#           self.prepared_stockGetDistOrderId = qy.PreparedQuery(
-#               stockGetDistOrderId_text,
-#               name = 'stockGetDistOrderId' )
-
-        self.repeated_stockGetDistOrderId = qy.query_store[name]
-
-
-        name = 'stockGetCountStock'
-        if name not in qy.query_store:
-            stockGetCountStock_text = (
-                'SELECT COUNT(DISTINCT (s.item)) AS stock_count ' 
-                'FROM order_line ol, stock s '
-                'WHERE ol.warehouse = ${} = ~V '
-                'AND ol.district = ${} = ~V ' 
-                'AND ol.order < ${} = ~V AND ol.order >= ${} = ~V - 20 ' 
-                'AND s.warehouse = ${} = ~V ' 
-                'AND s.item = ol.item '
-                'AND s.quantity < ${} = ~V ')
-
-            qy.RepeatedQuery( stockGetCountStock_text, name )
-
-#            self.prepared_stockGetCountStock = qy.PreparedQuery(
-#                stockGetCountStock_text,
-#                name = 'stockGetCountStock' )
-
-        self.repeated_stockGetCountStock = qy.query_store[name]
-
-
-    async def using_repeated(self):
-        '''perform stock level processing using repeated queries'''
-
-        
-        parms = (self.warehouse, self.district)
-        result_set = await self._invoke_repeated_sql(
-            self.repeated_stockGetDistOrderId, *parms)
-        if result_set:
-            next_o_id = result_set[0]['next_o_id']
-            value = next_o_id.value
-            logger.success(f'next_o_id={value}')
-        else:
-            logger.warning('no rows returned')
-
-        threshold = ii.Integer(tpc.TPCC_random(10,20))
-        parms = (self.warehouse, self.district,
-            next_o_id, next_o_id, self.warehouse, threshold)
-        result_set = await self._invoke_repeated_sql(
-            self.repeated_stockGetCountStock, *parms)
-        if result_set:
-            stock_count = result_set[0]['stock_count']
-            value = stock_count.value
-            logger.success(f'stock_count={value}')
-        else:
-            logger.warning('no rows returned')
-
-        await self.session.commit()
