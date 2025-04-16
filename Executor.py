@@ -265,7 +265,6 @@ class Work():
         await py.IIapi_close( clp )
         errorCheck(clp.cl_genParm)
 
-
         return body
 
 

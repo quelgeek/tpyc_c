@@ -120,11 +120,12 @@ class Terminal():
         while not halt_event.is_set():
             job = await self.jobs_queue.get()
             processor = processor_lookup[job]
+            logger.info(f'{self.name} running {job}')
             if self.query_protocol == 'repeated':
                 await processor.using_repeated()
             else:
                 await processor.using_prepared()
-            logger.info(f'{self.name} job/tx ENDED')
+            logger.success(f'{self.name} completed {job}')
             await commits_queue.put('tx ended')
             await asyncio.sleep(0)
 

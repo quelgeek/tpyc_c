@@ -13,6 +13,7 @@ def errorCheck(gpb):
     ##  request (all) error details 
     gep = py.IIAPI_GETEINFOPARM()
     gep.ge_errorHandle = gpb.gp_errorHandle
+    errors = []
     while True:
         py.IIapi_getErrorInfo( gep )
         if gep.ge_status != py.IIAPI_ST_SUCCESS:
@@ -20,6 +21,7 @@ def errorCheck(gpb):
         type = gep.ge_type
         if type == py.IIAPI_GE_ERROR:
             label = 'ERROR'
+            errors.append(gep.ge_errorCode)
         elif type == py.IIAPI_GE_WARNING:
             label = 'WARNING'
         elif type == py.IIAPI_GE_MESSAGE:
@@ -31,4 +33,6 @@ def errorCheck(gpb):
                     f'{gep.ge_SQLSTATE} {gep.ge_errorCode:#0x} '
                     f'{message}')
         logger.error( report )
+
+    return errors
 

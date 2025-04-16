@@ -280,6 +280,11 @@ class Order(Work):
             await self._invoke_repeated_sql(
                 self.repeated_stmtInsertOrderLine, *parms )
 
+        order_ref = f'{warehouse.value}.{district.value}.{order.value} '
+        msg = f'inserted {order_ref=} with {num_items.value} items'
+        msg = f'({self.terminal.name}): ' + msg
+        logger.success(msg)
+
         await self.session.commit()
 
 
