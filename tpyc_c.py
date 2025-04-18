@@ -16,6 +16,7 @@ from config import *
 #import order, payment, level, status, delivery
 from level import Level
 from order import Order
+from payment import Payment
 import Executor
 
 parser = argparse.ArgumentParser(description='Run Actian workload.')
@@ -103,15 +104,20 @@ class Terminal():
         sql = sql.encode()
         await session.execute(sql)
 
-        ##  select MVCC as the isolation mechanism
+        ##  specify MVCC as the isolation mechanism
         sql = 'SET LOCKMODE SESSION WHERE LEVEL = MVCC'
         sql = sql.encode()
         await session.execute(sql)
-        
+
+        ##  choose REPEATABLE READ isolation
+        sql = 'SET SESSION ISOLATION LEVEL REPEATABLE READ'
+        sql = sql.encode()
+        await session.execute(sql)
+            
         ##  instantiate workload processors
         processor_lookup = {
             'order': Order(self),
-            'payment': Executor.Payment(self),
+            'payment': Payment(self),
             'status': Executor.Status(self),
             'delivery': Executor.Delivery(self),
             'level': Level(self) }
