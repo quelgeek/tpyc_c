@@ -207,7 +207,7 @@ class Work():
                 cnp = py.IIAPI_CANCELPARM()
                 cnp.cn_stmtHandle = stmtHandle
                 await py.IIapi_cancel(cnp)
-                ##  unusually, we want to see IAPI_ST_FAILURE here
+                ##  unusually, we want to see IIAPI_ST_FAILURE here
                 logger.info(f'CANCELLING ({cnp.cn_genParm.gp_status=})')
                 ##  close the query
                 clp = py.IIAPI_CLOSEPARM()
@@ -266,18 +266,6 @@ class Work():
         errorCheck(clp.cl_genParm)
 
         return body
-
-
-class Order(Work):
-    pass
-
-
-class Payment(Work):
-    pass
-
-
-class Status(Work):
-    pass
 
 
 class Delivery(Work):

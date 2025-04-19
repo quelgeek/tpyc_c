@@ -241,7 +241,6 @@ class Payment(Work):
                 ##  knock this work item on the head
                 await self.session.rollback()
                 return
-
             else:
                 ##  choose the middle customer from the sorted list
                 middle_customer_index = namecnt.value // 2
