@@ -18,6 +18,7 @@ from level import Level
 from order import Order
 from payment import Payment
 from status import Status
+from delivery import Delivery
 import Executor
 
 parser = argparse.ArgumentParser(description='Run Actian workload.')
@@ -120,7 +121,7 @@ class Terminal():
             'order': Order(self),
             'payment': Payment(self),
             'status': Status(self),
-            'delivery': Executor.Delivery(self),
+            'delivery': Delivery(self),
             'level': Level(self) }
             
         ##  wait until all the other workers are ready; this would be tidier
@@ -160,9 +161,9 @@ async def driver(dbname, jobs_queue, halt_event):
     logger.info('driver() started')
 
     ##  construct the pool of work items from which to choose
-    n_orders = 4  #45
+    n_orders = 45
     n_payments = 43
-    n_statuses = 45 #4 
+    n_statuses = 4 
     n_deliveries = 4
     n_levels = 4
     orders = ['order'] * n_orders

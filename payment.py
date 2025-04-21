@@ -179,7 +179,6 @@ class Payment(Work):
         customer_lastname):
 
         logger.debug(f'{customer_warehouse=} {payment_amount=} {district=} {customer_district=} {customerID=} {customer_lastname=}')
-        await asyncio.sleep(0.1)
 
         parms = (payment_amount, warehouse)
         await self._invoke_repeated_sql(
