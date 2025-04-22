@@ -150,6 +150,12 @@ class Delivery(Work):
             await self._invoke_repeated_sql(
                 self.repeated_delivUpdateCustBalDelivCnt, *parms)
 
+            ##  the TPC-C specification invites me to COMMIT here if I want, 
+            ##  so for various reasons (that may not hold up in the long-run)
+            ##  I am currently inclined to do so
+
+            await self.session.commit()
+
         order_ref = f'{warehouse.value}.{district.value}.{order.value}'
         msg = f'delivered order {order_ref}'
         msg = f'({self.terminal.name}): ' + msg
