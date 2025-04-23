@@ -51,12 +51,6 @@ logger.info(
     f'{args.repeated=}, {args.prepared=}')
 
 
-#def _log_rowcount(rows):
-#    rowcount = 0 if not rows else len(rows)
-#    msg = f'({rowcount} rows)'
-#    logger.success(msg)
-
-
 class Terminal():
 
     def __init__(self,
@@ -189,11 +183,6 @@ async def starter(n_terminals, event_lock, ack_event, ready_event, run_event):
 
     logger.debug('starter() started')
 
-    #event_lock = controls.event_lock
-    #ack_event = controls.ack_event
-    #ready_event = controls.ready_event
-    #run_event = controls.run_event
-    
     ready_count = 0
     while ready_count < n_terminals:
         await ready_event.wait()
