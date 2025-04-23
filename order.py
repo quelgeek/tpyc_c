@@ -123,7 +123,7 @@ class Order(Work):
         district = ii.Integer(tpc.TPCC_random(1,CONFIGDISTPERWHSE))
         customer = ii.Integer(tpc.get_customerID())
         num_items = ii.Integer(tpc.TPCC_random(5,15))
-        logger.info(f'num_items={num_items.value}')
+        logger.debug(f'num_items={num_items.value}')
         items = []
         supplier_warehouses = []
         order_quantities = []

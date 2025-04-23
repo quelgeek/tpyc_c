@@ -47,14 +47,14 @@ if args.repeated:
 else:
     query_protocol = 'prepared'
 logger.info(
-    f'{dbname=},{n_terminals=},{tx_limit=},{time_limit=},'
-    f'{args.repeated=},{args.prepared=}')
+    f'{dbname=}, {n_terminals=}, {tx_limit=}, {time_limit=}, '
+    f'{args.repeated=}, {args.prepared=}')
 
 
-def _log_rowcount(rows):
-    rowcount = 0 if not rows else len(rows)
-    msg = f'({rowcount} rows)'
-    logger.success(msg)
+#def _log_rowcount(rows):
+#    rowcount = 0 if not rows else len(rows)
+#    msg = f'({rowcount} rows)'
+#    logger.success(msg)
 
 
 class Terminal():
@@ -91,14 +91,14 @@ class Terminal():
         halt_event = self.halt_event
         commits_queue = self.commits_queue
         jobs_queue = self.jobs_queue
-        logger.info(f'{self.name=} {event_lock=} {dbname=}')
+        logger.debug(f'{self.name=} {event_lock=} {dbname=}')
         
         ##  connect to the database
         session = Connection(self.dbname)
         await session.connect()
         self.session = session
-        logger.success(
-            f'started {self.name} {self.warehouse=} {self.district=}')
+        logger.info(f'started {self.name}: '
+            f'warehouse={self.warehouse} district={self.district}')
 
         ##  set session description
         description = f'\'{self.name} in tpyc_c\''
@@ -127,10 +127,10 @@ class Terminal():
         ##  wait until all the other workers are ready; this would be tidier
         ##  if I used asyncio.Barrier()...but that would require Python 3.11+
         async with event_lock:
-            logger.info(f'{self.name=} acquired event_lock')
+            logger.debug(f'{self.name=} acquired event_lock')
             ready_event.set()
             await ack_event.wait()
-            logger.info(f'{self.name=} got handshake')
+            logger.debug(f'{self.name=} got handshake')
             ack_event.clear()
         logger.info(f'{self.name=} waiting to run free')
         await run_event.wait()
@@ -140,12 +140,11 @@ class Terminal():
         while not halt_event.is_set():
             job = await self.jobs_queue.get()
             processor = processor_lookup[job]
-            logger.info(f'{self.name} running {job}')
             if self.query_protocol == 'repeated':
                 await processor.using_repeated()
             else:
                 await processor.using_prepared()
-            logger.success(f'{self.name} completed {job}')
+            logger.info(f'{self.name} completed {job}')
             await commits_queue.put('tx ended')
             await asyncio.sleep(0)
 
@@ -158,7 +157,7 @@ class Terminal():
 async def driver(dbname, jobs_queue, halt_event):
     '''drive the workers by queueing randomly chosen work_items'''
 
-    logger.info('driver() started')
+    logger.debug('driver() started')
 
     ##  construct the pool of work items from which to choose
     n_orders = 45
@@ -181,14 +180,14 @@ async def driver(dbname, jobs_queue, halt_event):
         else:
             selection = random.randint(1,100)-1
             job = job_pool[selection] 
-            logger.info(job)
             await jobs_queue.put(job)
+            logger.debug(f'driver added {job} to the work queue')
 
 
 async def starter(n_terminals, event_lock, ack_event, ready_event, run_event):
     '''signal start once all terminals are ready'''
 
-    logger.info('starter() started')
+    logger.debug('starter() started')
 
     #event_lock = controls.event_lock
     #ack_event = controls.ack_event
@@ -198,41 +197,41 @@ async def starter(n_terminals, event_lock, ack_event, ready_event, run_event):
     ready_count = 0
     while ready_count < n_terminals:
         await ready_event.wait()
-        logger.info('got ready_event')
+        logger.debug('got ready_event')
         ready_count = ready_count + 1
         ready_event.clear()
-        logger.info('cleared ready_event')
+        logger.debug('cleared ready_event')
         ack_event.set()
         logger.info('sent handshake')
-    logger.info('signalling free running')
+    logger.debug('signalling free running')
     run_event.set()
-    logger.info('starter COMPLETED')
+    logger.debug('starter COMPLETED')
 
 
 async def tx_counter(tx_limit, commits_queue, halt_event):
     '''count transactions; signal stop if transaction limit is reached'''
 
-    logger.info('tx_counter() started')
+    logger.debug('tx_counter() started')
     tx_count = 0
     while not halt_event.is_set():
         tx = await commits_queue.get()
         tx_count = tx_count + 1
-        logger.info('counted tx')
+        logger.debug('counted tx')
         if tx_limit and tx_count >= tx_limit:
-            logger.info('signalling halt')
+            logger.info('signalling halt, on tx_limit')
             halt_event.set()
-    logger.info('tx_counter FINISHED')
+    logger.debug('tx_counter FINISHED')
 
 
 async def timer(time_limit, halt_event):
     '''signal stop when time limit is reached'''
 
     if time_limit:
-        logger.info('time_terminator() started')
+        logger.debug('time_terminator() started')
         await asyncio.sleep(time_limit)
-        logger.info('signalling halt')
+        logger.info('signalling halt, on time_limit')
         halt_event.set()
-    logger.info('timer EXHAUSTED')
+    logger.debug('timer EXHAUSTED')
 
 
 async def workload(dbname, n_teminals, tx_limit, time_limit):

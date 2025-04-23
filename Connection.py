@@ -1,7 +1,6 @@
 import asyncio
 import random
 import pyngres.asyncio as py
-from loguru import logger
 from ErrorHandler import errorCheck
 
 class Connection():

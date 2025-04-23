@@ -123,7 +123,7 @@ class Work():
         if gqp.gq_mask & py.IIAPI_GQ_REPEAT_QUERY_ID:
             ##  save the repeated query handle for reuse
             query.reptHandle = gqp.gq_repeatQueryHandle
-            logger.info(f'{self.terminal.name}: {query.reptHandle=}')
+            logger.debug(f'{self.terminal.name}: {query.reptHandle=}')
 
         ##  free resources
         clp = py.IIAPI_CLOSEPARM()

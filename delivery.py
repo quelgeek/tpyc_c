@@ -89,8 +89,6 @@ class Delivery(Work):
 
     async def using_repeated(self):
 
-        logger.info(f'{self.terminal.name} processing delivery')
-
         random_carrier = tpc.TPCC_random(1,10)
         carrier = ii.Integer(random_carrier)
 
@@ -99,7 +97,8 @@ class Delivery(Work):
 
     async def process_delivery(self, warehouse, carrier):
     
-        logger.info(f'{warehouse=} {carrier=}')
+        msg = f'{self.terminal.name} processing delivery ' 
+        logger.info(f'{msg}: {warehouse.value=} {carrier.value=}')
 
         district = ii.Integer(0)
         for next_district in range(CONFIGDISTPERWHSE):

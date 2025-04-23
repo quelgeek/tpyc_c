@@ -71,7 +71,7 @@ class Level(Work):
             value = stock_count.value
             msg = msg + f'stock_count={value}'
 
-        msg = f'({self.terminal.name}): ' + msg
+        msg = f'({self.terminal.name}): checked level ' + msg
         logger.success(msg)
 
         await self.session.commit()
