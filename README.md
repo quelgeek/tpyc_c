@@ -29,7 +29,7 @@ set LOGURU_LEVEL=INFO
 ```
 ### On Linux/Darwin
 ```
-export LOGURUR_LEVEL=INFO
+export LOGURU_LEVEL=INFO
 ```
 ### Getting Help
 ```
