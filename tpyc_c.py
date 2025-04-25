@@ -1,19 +1,65 @@
+#!/usr/bin/env python
+
+##  Copyright (c) 2025 Roy Hann
+
+##  Name: tpyc_c.py
+##
+##  Description:
+##  	Demonstrates the capabilities of pyngres.asyncio to implement
+##      multiple concurrent Ingres sessions, running TPC-C **inspired**
+##      queries, without the use of multithreading. It also incidentally
+##      illustrates the use of repeated queries.
+##
+##      This IS NOT a benchmark. It is completely incapable of driving
+##      an Ingres DBMS to anywhere near its performance limits. It is
+##      just an illustration of the use of asyncio with Pyngres.
+##
+##  Command syntax:
+##      usage: tpyc_c.py [-h] [-n N] [-c C] [-d D] [-r | -p] dbname
+##
+##      dbname    target database, of form [vnode::]dbname[/server_class]
+##
+##      optional arguments:
+##        -h, --help      show help message and exit
+##        -n N            number (<= 10) of warehouse terminals to run
+##        -c C            count of transactions to execute
+##        -d D            duration of execution in seconds
+##        -r, --repeated  use REPEATED queries (this is the default)
+##        -p, --prepared  use PREPARED queries (NOT YET IMPLEMENTED)
+##
+##  Notes:
+##  1.  tpyc_c.py does not produce any output. Enable logging to see
+##      visible activity. On Windows: set LOGURU_LEVEL=INFO.
+##      On Linux/Darwin: export LOGURU_LEVEL=INFO.
+##  2.  I have made next to no effort to ensure the workload implemented
+##      by tpyc_c.py is faithful to the official TPC-C standard. I am
+##      content that it just does "stuff".
+##  3.  It is a good idea to roll the database forward between runs,
+##      unless you particularly want to see lots of "duplicate key on
+##      insert" errors, etc.
+##  4.  This code just "grew". It is poorly structured, badly annotated,
+##      unpythonic in many places, and has provisions for features that
+##      I probably won't ever implement (for example, the option to run
+##      prepared queries instead of repeated queries). Also it is dog-slow,  
+##      and the Loguru logging overhead doesn't help.
+## 
+##  Good luck...  :-|
+
 import argparse
 import asyncio
 import ctypes
-from loguru import logger
-import pyngres.asyncio as py
 import random
 import struct
 import time
-import xxhash
+
+from loguru import logger
+import pyngres.asyncio as py
 
 import Exceptions
 import TPCC_random as tpc
 from Query import RepeatedQuery, PreparedQuery
 from Connection import Connection
 from config import *
-#import order, payment, level, status, delivery
 from level import Level
 from order import Order
 from payment import Payment
