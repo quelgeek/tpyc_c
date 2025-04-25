@@ -84,9 +84,13 @@ group.add_argument('-p', '--prepared', action='store_true',
 
 args = parser.parse_args()
 dbname = args.dbname
-n_terminals = args.n or 10
+n_terminals = args.n or 2
 tx_limit = args.c
 time_limit = args.d
+##  absent any specified halting condition, set time_limit
+if not (tx_limit or time_limit):
+    time_limit = 5
+
 ##  define Query according to the supplied flag
 if args.repeated:
     query_protocol = 'repeated'
@@ -291,10 +295,6 @@ async def workload(dbname, n_teminals, tx_limit, time_limit):
             commits_queue, jobs_queue) 
         terminals.append(terminal)
    
-    ##  absent any specified halting condition, run for 30 seconds
-    if not (tx_limit or time_limit):
-        time_limit = 30
-
     tasks = []
     tasks.append(driver(dbname, jobs_queue, halt_event))
     tasks.append(starter(n_terminals, event_lock,
