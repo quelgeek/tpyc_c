@@ -94,8 +94,13 @@ if not (tx_limit or time_limit):
 ##  define Query according to the supplied flag
 if args.repeated:
     query_protocol = 'repeated'
-else:
+elif args.prepared:
     query_protocol = 'prepared'
+    logger.critical('prepared queries aren\'t yet implemented')
+    quit()
+else:
+    query_protocol = 'repeated'
+    
 logger.info(
     f'{dbname=}, {n_terminals=}, {tx_limit=}, {time_limit=}, '
     f'{args.repeated=}, {args.prepared=}')
